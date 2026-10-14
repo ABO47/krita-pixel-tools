@@ -1,0 +1,101 @@
+name: build-windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 330
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - name: Checkout plugin sources
+        uses: actions/checkout@v4
+        with:
+          path: krita-pixel-tools
+
+      - name: Install Python 3.10 (required by krita/5.2 branch)
+        run: choco install -y python310 --params "/InstallDir:C:\tools\Python-3.10" --install-arguments="PrependPath=0 AppendPath=0 Include_doc=0 Include_test=0 Include_launcher=0"
+
+      - name: Install CMake 3.31 (4.x is not supported by Krita)
+        run: choco install -y cmake --version=3.31.6 --install-arguments="ADD_CMAKE_TO_PATH=System"
+
+      - name: Download llvm-mingw + Ninja (5.2-era toolchain, no spaces in path)
+        run: |
+          mkdir C:\deps
+          curl -L -o C:\deps\llvm-mingw.zip https://github.com/mstorsjo/llvm-mingw/releases/download/20240619/llvm-mingw-20240619-ucrt-x86_64.zip
+          7z x C:\deps\llvm-mingw.zip -oC:\deps
+          curl -L -o C:\deps\ninja.zip https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-win.zip
+          7z x C:\deps\ninja.zip -oC:\deps\Ninja
+
+      - name: Clone Krita at v5.2.13
+        run: |
+          mkdir C:\krita-dev
+          cd /d C:\krita-dev
+          git clone --branch krita/5.2 https://invent.kde.org/graphics/krita.git
+          cd krita
+          git fetch --tags
+          git checkout v5.2.13
+
+      - name: Drop plugin into Krita tree
+        run: |
+          xcopy /E /I %GITHUB_WORKSPACE%\krita-pixel-tools C:\krita-dev\krita\plugins\krita-pixel-tools
+          echo add_subdirectory( krita-pixel-tools )>> C:\krita-dev\krita\plugins\CMakeLists.txt
+
+      - name: Fetch prebuilt deps + generate env
+        run: |
+          cd /d C:\krita-dev
+          git clone https://invent.kde.org/packaging/krita-deps-management.git
+          git clone https://invent.kde.org/packaging/krita-ci-utilities.git krita-deps-management/ci-utilities
+          C:\tools\Python-3.10\python.exe -m venv PythonEnv --upgrade-deps
+          call PythonEnv\Scripts\activate.bat
+          python -m pip install -r krita-deps-management\requirements.txt
+          python krita-deps-management\tools\setup-env.py --full-krita-env -v PythonEnv -p C:\deps\llvm-mingw-20240619-ucrt-x86_64\bin\ -p C:\deps\llvm-mingw-20240619-ucrt-x86_64\x86_64-w64-mingw32\bin\ -p C:\deps\Ninja\
+
+      - name: Configure
+        run: |
+          cd /d C:\krita-dev
+          call env.bat
+          mkdir b_krita
+          cd b_krita
+          cmake C:\krita-dev\krita -DCMAKE_INSTALL_PREFIX=C:/krita-dev/_install -DBUILD_TESTING=OFF -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build plugin target (dep closure builds automatically)
+        run: |
+          cd /d C:\krita-dev
+          call env.bat
+          cd b_krita
+          ninja kitapixeltools
+
+      - name: Package importable zip
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dll = Get-ChildItem -Path C:\krita-dev\b_krita -Recurse -Filter kitapixeltools.dll | Select-Object -First 1
+          if (-not $dll) { throw 'kitapixeltools.dll not found under b_krita' }
+          $pkg = 'pkg\krita-pixel-tools\pixel_tools'
+          New-Item -ItemType Directory -Force "$pkg\lib" | Out-Null
+          Copy-Item $dll.FullName "$pkg\lib\"
+          Copy-Item C:\krita-dev\krita\plugins\krita-pixel-tools\python\* $pkg\
+          Copy-Item C:\krita-dev\krita\plugins\krita-pixel-tools\src\pixel_tools.action $pkg\
+          Copy-Item C:\krita-dev\krita\plugins\krita-pixel-tools\pixeltools.desktop 'pkg\krita-pixel-tools\'
+          Compress-Archive -Path 'pkg\krita-pixel-tools\*' -DestinationPath krita-pixel-tools.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: krita-pixel-tools
+          path: krita-pixel-tools.zip
+
+      - name: Publish to Releases (unique tag per run)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Pixel Tools build ${{ github.run_number }}
+          prerelease: true
+          files: krita-pixel-tools.zip

@@ -1,0 +1,4 @@
+{
+    "Name": "PixelTools",
+    "Description": "Pixel-art canvas tools (native code, loaded via Python)"
+}

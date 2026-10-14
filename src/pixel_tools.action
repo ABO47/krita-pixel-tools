@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ActionCollection version="2" name="Tools">
+  <Actions category="tool-shortcuts">
+    <text>Tool Shortcuts</text>
+    <Action name="PixelEllipseTool">
+      <icon>krita_tool_ellipse</icon>
+      <text>Pixel Ellipse</text>
+      <toolTip>Pixel-perfect ellipse (1px, no antialiasing)</toolTip>
+      <iconText>Pixel Ellipse</iconText>
+      <isCheckable>false</isCheckable>
+    </Action>
+  </Actions>
+</ActionCollection>
