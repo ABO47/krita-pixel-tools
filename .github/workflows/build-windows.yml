@@ -63,9 +63,12 @@ jobs:
         run: |
           cd /d C:\krita-dev
           call env.bat
+          set PATH=C:\deps\llvm-mingw-20240619-ucrt-x86_64\bin;C:\deps\llvm-mingw-20240619-ucrt-x86_64\x86_64-w64-mingw32\bin;C:\deps\Ninja;%PATH%
+          set CC=C:\deps\llvm-mingw-20240619-ucrt-x86_64\bin\clang.exe
+          set CXX=C:\deps\llvm-mingw-20240619-ucrt-x86_64\bin\clang++.exe
           mkdir b_krita
           cd b_krita
-          cmake C:\krita-dev\krita -DCMAKE_INSTALL_PREFIX=C:/krita-dev/_install -DBUILD_TESTING=OFF -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake C:\krita-dev\krita -DCMAKE_INSTALL_PREFIX=C:/krita-dev/_install -DBUILD_TESTING=OFF -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBoost_NO_BOOST_CMAKE=ON
 
       - name: Build plugin target (dep closure builds automatically)
         run: |
