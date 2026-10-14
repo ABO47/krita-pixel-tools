@@ -68,7 +68,7 @@ jobs:
           set CXX=C:\deps\llvm-mingw-20240619-ucrt-x86_64\bin\clang++.exe
           mkdir b_krita
           cd b_krita
-          cmake C:\krita-dev\krita -DCMAKE_INSTALL_PREFIX=C:/krita-dev/_install -DBUILD_TESTING=OFF -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBoost_NO_BOOST_CMAKE=ON
+          cmake C:\krita-dev\krita -DCMAKE_INSTALL_PREFIX=C:/krita-dev/_install -DBUILD_TESTING=OFF -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
       - name: Build plugin target (dep closure builds automatically)
         run: |
