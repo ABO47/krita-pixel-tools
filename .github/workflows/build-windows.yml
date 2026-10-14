@@ -20,7 +20,9 @@ jobs:
           path: krita-pixel-tools
 
       - name: Install Python 3.10 (required by krita/5.2 branch)
-        run: choco install -y python310 --params "/InstallDir:C:\tools\Python-3.10" --install-arguments="PrependPath=0 AppendPath=0 Include_doc=0 Include_test=0 Include_launcher=0"
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
       - name: Install CMake 3.31 (4.x is not supported by Krita)
         run: choco install -y cmake --version=3.31.6 --install-arguments="ADD_CMAKE_TO_PATH=System"
@@ -52,7 +54,7 @@ jobs:
           cd /d C:\krita-dev
           git clone https://invent.kde.org/packaging/krita-deps-management.git
           git clone https://invent.kde.org/packaging/krita-ci-utilities.git krita-deps-management/ci-utilities
-          C:\tools\Python-3.10\python.exe -m venv PythonEnv --upgrade-deps
+          python -m venv PythonEnv --upgrade-deps
           call PythonEnv\Scripts\activate.bat
           python -m pip install -r krita-deps-management\requirements.txt
           python krita-deps-management\tools\setup-env.py --full-krita-env -v PythonEnv -p C:\deps\llvm-mingw-20240619-ucrt-x86_64\bin\ -p C:\deps\llvm-mingw-20240619-ucrt-x86_64\x86_64-w64-mingw32\bin\ -p C:\deps\Ninja\
